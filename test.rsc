@@ -1,0 +1,4 @@
+LDC 5
+STA 10
+OUT 10
+STP
