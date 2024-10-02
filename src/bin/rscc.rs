@@ -4,6 +4,7 @@ use std::fs;
 use std::fs::File;
 use std::path::Path;
 use std::collections::HashMap;
+use std::process::ExitCode;
 use clap::Parser;
 use cranelift::prelude::*;
 use cranelift_codegen::ir::{FuncRef, Function};
@@ -140,7 +141,7 @@ impl Program {
     }
 }
 
-fn main() -> std::io::Result<()> {
+fn main() -> ExitCode {
     let options = CLI::parse();
     let path = Path::new(&options.file);
     let contents = fs::read_to_string(path).unwrap();
@@ -148,8 +149,7 @@ fn main() -> std::io::Result<()> {
 
     if parse_result.diagnostics.len() > 0 {
         println!("{}", parse_result.diagnostics[0].annotate(&contents));
-        println!("Found some diagnostics");
-        println!("{:?}", parse_result.diagnostics);
+        return ExitCode::from(1);
     }
 
     let res = compile(parse_result.instructions);
@@ -183,7 +183,7 @@ fn main() -> std::io::Result<()> {
         .status()
         .unwrap();
 
-    Ok(())
+    ExitCode::from(0)
 }
 
 fn compile(instructions: Vec<rscc::Instruction>) -> ObjectProduct {
