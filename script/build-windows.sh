@@ -17,5 +17,5 @@ docker run \
     --platform linux/amd64 \
     --rm \
     -v $PWD:/rscc \
-    -t rscc-windows-install-builder:latest \
+    -t ghcr.io/camertron/rscc-windows-install-builder:latest \
     /bin/bash -c 'cd /rscc/windows && wine /root/.wine/drive_c/Program\ Files/Inno\ Setup\ 6/ISCC.exe rscc.iss'
