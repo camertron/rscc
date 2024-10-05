@@ -1,8 +1,9 @@
 extern crate rscc;
 
+use std::env;
 use std::fs;
 use std::fs::File;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::collections::HashMap;
 use std::process::ExitCode;
 use clap::Parser;
@@ -164,7 +165,17 @@ fn main() -> ExitCode {
 
     let mut build = cc::Build::new();
 
-    build.file("rsc.c")
+    let c_helper = match find_c_helper_file() {
+        Some(c_helper) => c_helper,
+        None => {
+            println!("Could not find helper file rsc.c");
+            return ExitCode::from(2);
+        }
+    };
+
+    modify_path_if_necessary();
+
+    build.file(c_helper)
         .object(o_file)
         .target(built_info::TARGET)
         .opt_level(built_info::OPT_LEVEL.parse().unwrap())
@@ -184,6 +195,60 @@ fn main() -> ExitCode {
         .unwrap();
 
     ExitCode::from(0)
+}
+
+fn find_c_helper_file() -> Option<PathBuf> {
+    let found = match &mut env::current_exe() {
+        Ok(exe_path) => {
+            // look next to rscc executable
+            exe_path.pop();
+            let p = exe_path.join("rsc.c");
+
+            if p.exists() {
+                Some(p)
+            } else {
+                None
+            }
+        }
+
+        Err(_) => {
+            None
+        }
+    };
+
+    found.or_else(|| {
+        // default to looking in current working directory
+        let p = Path::new("rsc.c").to_path_buf();
+
+        if p.exists() {
+            Some(p)
+        } else {
+            None
+        }
+    })
+}
+
+fn modify_path_if_necessary() {
+    match &mut env::current_exe() {
+        Ok(exe_path) => {
+            exe_path.pop();
+            let mingw_path = exe_path.join("mingw64_rsc").join("bin");
+
+            if mingw_path.exists() {
+                match std::env::var("PATH") {
+                    Ok(existing_path) => {
+                        std::env::set_var("PATH", format!("{};{}", existing_path, mingw_path.to_str().unwrap()));
+                    }
+
+                    Err(_) => {
+                        std::env::set_var("PATH", mingw_path.as_os_str());
+                    }
+                }
+            }
+        }
+
+        Err(_) => ()
+    };
 }
 
 fn compile(instructions: Vec<rscc::Instruction>) -> ObjectProduct {
