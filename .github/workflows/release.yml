@@ -1,8 +1,12 @@
 name: "Release"
+
 on:
   push:
     tags:
       - "v*.*.*"
+
+permissions:
+  contents: write
 
 jobs:
   windows:
@@ -36,10 +40,6 @@ jobs:
       - windows
     steps:
       - uses: actions/download-artifact@v4
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-        with:
-          limit-access-to-actor: true
       - uses: softprops/action-gh-release@v2
         with:
           make_latest: "true"
