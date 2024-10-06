@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "rscc"
-#define MyAppVersion "1.0"
+; #define MyAppVersion "1.0"
 #define MyAppPublisher "Cameron Dutro"
 #define MyAppURL "https://github.com/camertron/rscc"
 
