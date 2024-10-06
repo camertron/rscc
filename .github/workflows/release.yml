@@ -118,6 +118,8 @@ jobs:
       - windows
       - darwin_x86
       - darwin_aarch
+      - linux_x86
+      - linux_aarch
     steps:
       - uses: actions/download-artifact@v4
       - name: Create release
