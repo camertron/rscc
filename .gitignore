@@ -2,4 +2,4 @@ target/
 windows/Output/
 *.out
 *.log
-*.o
+./*.o
