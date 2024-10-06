@@ -17,15 +17,21 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: 1.81.0
-      - run: cargo install cross --git https://github.com/cross-rs/cross
-      - run: script/build-windows.sh "${{ github.ref_name }}"
-      - run: cp windows/Output/rscc-installer.exe rscc-windows-installer-x86_64-${{ github.ref_name }}.exe
-      - uses: actions/upload-artifact@v4
+      - name: Install cross
+        run: cargo install cross --git https://github.com/cross-rs/cross
+      - name: Build
+        run: script/build-windows.sh "${{ github.ref_name }}"
+      - name: Rename installer
+        run: cp windows/Output/rscc-installer.exe rscc-windows-installer-x86_64-${{ github.ref_name }}.exe
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
         with:
           name: windows-installer
           path: rscc-windows-installer-x86_64-${{ github.ref_name }}.exe
-      - run: cp rscc-windows.tar.gz rscc-windows-gnu-x86_64-${{ github.ref_name }}.tar.gz
-      - uses: actions/upload-artifact@v4
+      - name: Rename artifact
+        run: cp rscc-windows.tar.gz rscc-windows-gnu-x86_64-${{ github.ref_name }}.tar.gz
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
         with:
           name: windows-artifact
           path: rscc-windows-gnu-x86_64-${{ github.ref_name }}.tar.gz
@@ -36,7 +42,8 @@ jobs:
       - windows
     steps:
       - uses: actions/download-artifact@v4
-      - uses: softprops/action-gh-release@v2
+      - name: Create release
+        uses: softprops/action-gh-release@v2
         with:
           make_latest: "true"
           files: |
