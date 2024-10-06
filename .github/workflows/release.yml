@@ -129,5 +129,5 @@ jobs:
             windows-artifact/rscc-windows-gnu-x86_64-${{ github.ref_name }}.tar.gz
             darwin-artifact-x86_64/rscc-darwin-x86_64-${{ github.ref_name }}.tar.gz
             darwin-artifact-aarch64/rscc-darwin-aarch64-${{ github.ref_name }}.tar.gz
-            linux-artifact-x86_64/rscc-linux-x86_64.tar.gz rscc-linux-x86_64-${{ github.ref_name }}.tar.gz
-            linux-artifact-aarch64/rscc-linux-aarch64.tar.gz rscc-linux-aarch64-${{ github.ref_name }}.tar.gz
+            linux-artifact-x86_64/rscc-linux-x86_64-${{ github.ref_name }}.tar.gz
+            linux-artifact-aarch64/rscc-linux-aarch64-${{ github.ref_name }}.tar.gz
