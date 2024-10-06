@@ -20,6 +20,10 @@ jobs:
         with:
           name: windows-installer
           path: windows/Output/rscc-windows-installer-x86_64-${{ github.ref_name }}.exe
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        with:
+          limit-access-to-actor: true
       - run: mv rscc-windows.tar.gz rscc-windows-gnu-x86_64-${{ github.ref_name }}.tar.gz
       - uses: actions/upload-artifact@v4
         with:
