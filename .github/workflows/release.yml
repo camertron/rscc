@@ -18,11 +18,7 @@ jobs:
         with:
           toolchain: 1.81.0
       - run: cargo install cross --git https://github.com/cross-rs/cross
-      - run: script/build-windows.sh
-      # - name: Setup tmate session
-      #   uses: mxschmitt/action-tmate@v3
-      #   with:
-      #     limit-access-to-actor: true
+      - run: script/build-windows.sh "${{ github.ref_name }}"
       - run: cp windows/Output/rscc-installer.exe rscc-windows-installer-x86_64-${{ github.ref_name }}.exe
       - uses: actions/upload-artifact@v4
         with:
