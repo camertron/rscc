@@ -1,5 +1,6 @@
 target/
 windows/Output/
+vendor/
 *.out
 *.log
 ./*.o

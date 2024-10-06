@@ -35,11 +35,51 @@ jobs:
         with:
           name: windows-artifact
           path: rscc-windows-gnu-x86_64-${{ github.ref_name }}.tar.gz
+  darwin_x86:
+    name: Build Darwin x86_64 Artifact
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: 1.81.0
+      - name: Install cross
+        run: cargo install cross --git https://github.com/cross-rs/cross
+      - name: Build
+        run: script/build-darwin-x86_64.sh "${{ github.ref_name }}"
+      - name: Rename artifacts
+        run: cp rscc-darwin-x86_64.tar.gz rscc-darwin-x86_64-${{ github.ref_name }}.tar.gz
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: darwin-artifact-x86_64
+          path: rscc-darwin-x86_64-${{ github.ref_name }}.tar.gz
+  darwin_aarch:
+    name: Build Darwin aarch64 Artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: 1.81.0
+      - name: Install cross
+        run: cargo install cross --git https://github.com/cross-rs/cross
+      - name: Build
+        run: script/build-darwin-aarch64.sh "${{ github.ref_name }}"
+      - name: Rename artifacts
+        run: cp rscc-darwin-aarch64.tar.gz rscc-darwin-aarch64-${{ github.ref_name }}.tar.gz
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: darwin-artifact-aarch64
+          path: rscc-darwin-aarch64-${{ github.ref_name }}.tar.gz
   release:
     name: Generate Release
     runs-on: ubuntu-latest
     needs:
       - windows
+      - darwin_x86
+      - darwin_aarch
     steps:
       - uses: actions/download-artifact@v4
       - name: Create release
@@ -49,3 +89,5 @@ jobs:
           files: |
             windows-installer/rscc-windows-installer-x86_64-${{ github.ref_name }}.exe
             windows-artifact/rscc-windows-gnu-x86_64-${{ github.ref_name }}.tar.gz
+            darwin-artifact-x86_64/rscc-darwin-aarch64-${{ github.ref_name }}.tar.gz
+            darwin-artifact-aarch64/rscc-darwin-aarch64-${{ github.ref_name }}.tar.gz
