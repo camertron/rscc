@@ -1,5 +1,8 @@
 #! /bin/bash
 
+set -x
+set -eo pipefail
+
 if [ ! -d vendor/cross ]; then
     git clone https://github.com/cross-rs/cross.git vendor/cross
 fi
@@ -16,4 +19,4 @@ docker image tag \
     ghcr.io/cross-rs/x86_64-apple-darwin-cross:latest \
     ghcr.io/camertron/rscc-darwin-x64-builder:latest
 
-docker push ghcr.io/camertron/rscc-darwin-builder:latest
+docker push ghcr.io/camertron/rscc-darwin-x64-builder:latest

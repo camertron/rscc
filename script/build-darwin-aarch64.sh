@@ -1,5 +1,8 @@
 #! /bin/bash
 
+set -x
+set -eo pipefail
+
 cross build --target=aarch64-apple-darwin --release
 
 mkdir rscc-darwin-aarch64

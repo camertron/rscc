@@ -1,5 +1,8 @@
 #! /bin/bash
 
+set -x
+set -eo pipefail
+
 docker build \
     --cache-from ghcr.io/camertron/rscc-windows-install-builder:latest \
     --label "org.opencontainers.image.source=https://github.com/camertron/rscc" \

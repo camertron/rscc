@@ -55,7 +55,7 @@ jobs:
           name: darwin-artifact-x86_64
           path: rscc-darwin-x86_64-${{ github.ref_name }}.tar.gz
   darwin_aarch:
-    name: Build Darwin aarch64 Artifacts
+    name: Build Darwin aarch64 Artifact
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -89,5 +89,5 @@ jobs:
           files: |
             windows-installer/rscc-windows-installer-x86_64-${{ github.ref_name }}.exe
             windows-artifact/rscc-windows-gnu-x86_64-${{ github.ref_name }}.tar.gz
-            darwin-artifact-x86_64/rscc-darwin-aarch64-${{ github.ref_name }}.tar.gz
+            darwin-artifact-x86_64/rscc-darwin-x86_64-${{ github.ref_name }}.tar.gz
             darwin-artifact-aarch64/rscc-darwin-aarch64-${{ github.ref_name }}.tar.gz

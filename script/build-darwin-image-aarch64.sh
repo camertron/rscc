@@ -1,5 +1,8 @@
 #! /bin/bash
 
+set -x
+set -eo pipefail
+
 if [ ! -d vendor/cross ]; then
     git clone https://github.com/cross-rs/cross.git vendor/cross
 fi

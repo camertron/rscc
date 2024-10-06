@@ -1,5 +1,8 @@
 #! /bin/bash
 
+set -x
+set -eo pipefail
+
 cross build --target=x86_64-apple-darwin --release
 
 mkdir rscc-darwin-x86_64
