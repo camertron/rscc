@@ -15,16 +15,16 @@ jobs:
           toolchain: 1.81.0
       - run: cargo install cross --git https://github.com/cross-rs/cross
       - run: script/build-windows.sh
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-        with:
-          limit-access-to-actor: true
-      - run: mv windows/Output/rscc-installer.exe windows/Output/rscc-windows-installer-x86_64-${{ github.ref_name }}.exe
+      # - name: Setup tmate session
+      #   uses: mxschmitt/action-tmate@v3
+      #   with:
+      #     limit-access-to-actor: true
+      - run: cp windows/Output/rscc-installer.exe rscc-windows-installer-x86_64-${{ github.ref_name }}.exe
       - uses: actions/upload-artifact@v4
         with:
           name: windows-installer
-          path: windows/Output/rscc-windows-installer-x86_64-${{ github.ref_name }}.exe
-      - run: mv rscc-windows.tar.gz rscc-windows-gnu-x86_64-${{ github.ref_name }}.tar.gz
+          path: rscc-windows-installer-x86_64-${{ github.ref_name }}.exe
+      - run: cp rscc-windows.tar.gz rscc-windows-gnu-x86_64-${{ github.ref_name }}.tar.gz
       - uses: actions/upload-artifact@v4
         with:
           name: windows-artifact
