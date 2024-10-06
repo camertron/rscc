@@ -36,9 +36,13 @@ jobs:
       - windows
     steps:
       - uses: actions/download-artifact@v4
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        with:
+          limit-access-to-actor: true
       - uses: softprops/action-gh-release@v2
         with:
           make_latest: "true"
           files: |
-            rscc-windows-installer-x86_64-${{ github.ref_name }}.exe
-            rscc-windows-gnu-x86_64-${{ github.ref_name }}.tar.gz
+            windows-installer/rscc-windows-installer-x86_64-${{ github.ref_name }}.exe
+            windows-artifact/rscc-windows-gnu-x86_64-${{ github.ref_name }}.tar.gz
