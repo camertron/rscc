@@ -1,17 +1,22 @@
 extern crate rscc;
 
+use rand::Rng;
 use std::env;
 use std::fs;
+use std::io;
+use std::io::{Write};
+use std::mem;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::collections::HashMap;
 use std::process::ExitCode;
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use cranelift::prelude::*;
 use cranelift_codegen::ir::{FuncRef, Function};
 use cranelift_codegen::Context;
-use cranelift_module::{Linkage, Module};
-use cranelift_object::{ObjectBuilder, ObjectModule, ObjectProduct};
+use cranelift_jit::{JITBuilder, JITModule};
+use cranelift_module::{FuncId, Linkage, Module};
+use cranelift_object::{ObjectBuilder, ObjectModule};
 use rscc::Instruction;
 use target_lexicon::Triple;
 use std::str::FromStr;
@@ -22,16 +27,40 @@ pub mod built_info {
 }
 
 #[derive(Parser, Debug)]
-#[command(author="Cameron C. Dutro")]
-#[command(version="0.1.0")]
-#[command(about="Compile an RSC program into an executable.")]
+#[command(
+    name="rscc",
+    author="Cameron C. Dutro",
+    version="0.1.0",
+    about="The RSC (Reasonably Simple Computer) compiler"
+)]
 struct CLI {
-    #[arg(long, short, value_name="FILE", help="The file to compile.")]
-    file: String,
+    #[command(subcommand)]
+    command: Commands,
 }
 
-struct Program {
-    module: ObjectModule,
+#[derive(Debug, Subcommand)]
+enum Commands {
+    #[command(
+        about="Compile an RSC program into an executable",
+        arg_required_else_help = true,
+    )]
+    Build {
+        #[arg(long, short, value_name="FILE", help="The file containing the program to compile")]
+        file: String,
+    },
+
+    #[command(
+        about="Run an RSC program",
+        arg_required_else_help = true,
+    )]
+    Run {
+        #[arg(long, short, value_name="FILE", help="The file containing the program to run")]
+        file: String,
+    }
+}
+
+struct Program<'a, M: Module> {
+    module: &'a mut M,
     rsc_init: FuncRef,
     rsc_out: FuncRef,
     rsc_rand: FuncRef,
@@ -41,17 +70,44 @@ struct Program {
     var_index: usize,
 }
 
-impl Program {
-    fn new(main: &mut FunctionBuilder) -> Self {
-        let mut shared_builder = settings::builder();
-        shared_builder.enable("is_pic").unwrap();
+extern "C" fn rsc_init() {
+}
 
-        let shared_flags = settings::Flags::new(shared_builder);
-        let isa_builder = isa::lookup(Triple::from_str(built_info::TARGET).unwrap()).unwrap();
-        let isa = isa_builder.finish(shared_flags).unwrap();
-        let obj_builder = ObjectBuilder::new(isa, "main", cranelift_module::default_libcall_names()).unwrap();
-        let mut module = ObjectModule::new(obj_builder);
+extern "C" fn rsc_out(number: f64) {
+    println!("{:.2}", number);
+}
 
+extern "C" fn rsc_rand() -> f64 {
+    let mut rng = rand::thread_rng();
+    rng.gen_range((-0x10000 as f64)..(0x10000 as f64))
+}
+
+extern "C" fn rsc_input() -> f64 {
+    loop {
+        print!("Input: ");
+        io::stdout().flush().unwrap();
+
+        let mut buffer = String::new();
+
+        match io::stdin().read_line(&mut buffer) {
+            Ok(_) => {
+                let trimed_buffer = buffer.trim();
+
+                match trimed_buffer.parse::<f64>() {
+                    Ok(float) => return float,
+                    Err(_) => {}
+                }
+            }
+
+            Err(_) => {}
+        }
+
+        println!("Invalid entry, try again.")
+    }
+}
+
+impl<'a, M: Module> Program<'a, M> {
+    fn new(main: &mut FunctionBuilder, module: &'a mut M) -> Self {
         main.func.signature.call_conv = module.isa().default_call_conv();
         main.func.signature.returns.push(AbiParam::new(types::I32));
 
@@ -93,7 +149,7 @@ impl Program {
             rsc_out: module.declare_func_in_func(out_func_id, main.func),
             rsc_rand: module.declare_func_in_func(rand_func_id, main.func),
             rsc_input: module.declare_func_in_func(input_func_id, main.func),
-            module: module,
+            module,
             accum: accum,
             location_vars: HashMap::new(),
             var_index: 1,
@@ -101,7 +157,7 @@ impl Program {
     }
 }
 
-impl Program {
+impl<'a, M: Module> Program<'a, M> {
     fn store(self: &mut Self, func: &mut FunctionBuilder, location: u32) {
         let accum = self.accum;
         let location = self.get_or_create_loc(func, location);
@@ -144,16 +200,42 @@ impl Program {
 
 fn main() -> ExitCode {
     let options = CLI::parse();
-    let path = Path::new(&options.file);
-    let contents = fs::read_to_string(path).unwrap();
-    let parse_result = rscc::parse(&contents);
 
-    if parse_result.diagnostics.len() > 0 {
-        println!("{}", parse_result.diagnostics[0].annotate(&contents));
-        return ExitCode::from(1);
+    match options.command {
+        Commands::Build { file } => {
+            build(&file)
+        }
+
+        Commands::Run { file } => {
+            run(&file)
+        }
     }
+}
 
-    let res = compile(parse_result.instructions);
+fn build(file: &str) -> ExitCode {
+    match parse(file) {
+        Ok(parse_result) => {
+            build_instrs(file, parse_result.instructions)
+        }
+
+        Err(_) => ExitCode::from(1)
+    }
+}
+
+fn build_instrs(file: &str, instructions: Vec<rscc::Instruction>) -> ExitCode {
+    let mut shared_builder = settings::builder();
+    shared_builder.enable("is_pic").unwrap();
+
+    let shared_flags = settings::Flags::new(shared_builder);
+    let isa_builder = isa::lookup(Triple::from_str(built_info::TARGET).unwrap()).unwrap();
+    let isa = isa_builder.finish(shared_flags).unwrap();
+    let obj_builder = ObjectBuilder::new(isa, "main", cranelift_module::default_libcall_names()).unwrap();
+    let mut module = ObjectModule::new(obj_builder);
+
+    compile(instructions, &mut module);
+
+    let path = Path::new(file);
+    let res = module.finish();
     let base_name = path.file_stem().unwrap().to_str().unwrap();
     let out_dir = Path::new("target").join(base_name);
 
@@ -187,12 +269,75 @@ fn main() -> ExitCode {
     let compiler = build.get_compiler();
     let a_file = out_dir.join(format!("lib{}.a", base_name));
 
-    std::process::Command::new(compiler.path().to_str().unwrap())
+    let compile_result = std::process::Command::new(compiler.path().to_str().unwrap())
         .arg(a_file)
         .arg("-o")
         .arg(base_name)
-        .status()
-        .unwrap();
+        .status();
+
+    match compile_result {
+        Ok(exit_status) => {
+            ExitCode::from(exit_status.code().unwrap_or(0) as u8)
+        }
+
+        Err(_) => {
+            println!("Compilation failed");
+            ExitCode::from(1)
+        }
+    }
+}
+
+fn parse(file: &str) -> Result<rscc::ParseResult, ()> {
+    let path = Path::new(file);
+    let contents = fs::read_to_string(path).unwrap();
+    let parse_result = rscc::parse(&contents);
+
+    if parse_result.diagnostics.len() > 0 {
+        println!("{}", parse_result.diagnostics[0].annotate(&contents));
+        Err(())
+    } else {
+        Ok(parse_result)
+    }
+}
+
+fn run(file: &str) -> ExitCode {
+    match parse(file) {
+        Ok(parse_result) => {
+            run_instrs(parse_result.instructions)
+        }
+
+        Err(_) => ExitCode::from(1)
+    }
+}
+
+fn run_instrs(instructions: Vec<rscc::Instruction>) -> ExitCode {
+    let mut shared_builder = settings::builder();
+
+    // Disable PIC so code can run on aarch64.
+    // See: https://github.com/bytecodealliance/wasmtime/issues/2735#issuecomment-801471323
+    shared_builder.set("is_pic", "false").unwrap();
+
+    let shared_flags = settings::Flags::new(shared_builder);
+    let isa_builder = isa::lookup(Triple::from_str(built_info::TARGET).unwrap()).unwrap();
+    let isa = isa_builder.finish(shared_flags).unwrap();
+    let mut builder = JITBuilder::with_isa(isa, cranelift_module::default_libcall_names());
+
+    // fill in these helper functions with rust implementations so we can actually run the code
+    builder.symbol("rsc_init", rsc_init as *const u8);
+    builder.symbol("rsc_rand", rsc_rand as *const u8);
+    builder.symbol("rsc_out", rsc_out as *const u8);
+    builder.symbol("rsc_input", rsc_input as *const u8);
+
+    let mut module = JITModule::new(builder);
+
+    let main_id = compile(instructions, &mut module);
+
+    module.finalize_definitions().unwrap();
+
+    let code_ptr = module.get_finalized_function(main_id);
+    let code_fn = unsafe { mem::transmute::<_, fn() -> ()>(code_ptr) };
+
+    code_fn();
 
     ExitCode::from(0)
 }
@@ -251,7 +396,7 @@ fn modify_path_if_necessary() {
     };
 }
 
-fn compile(instructions: Vec<rscc::Instruction>) -> ObjectProduct {
+fn compile<M: Module>(instructions: Vec<rscc::Instruction>, module: &mut M) -> FuncId {
     let mut builder_context = FunctionBuilderContext::new();
     let main_func = Function::new();
     let mut ctx = Context::for_function(main_func);
@@ -260,7 +405,7 @@ fn compile(instructions: Vec<rscc::Instruction>) -> ObjectProduct {
         &mut builder_context
     );
 
-    let mut program: Program = Program::new(&mut main);
+    let mut program: Program<M> = Program::new(&mut main, module);
 
     // Create the entry block, to start emitting code in.
     let entry_block = main.create_block();
@@ -311,10 +456,10 @@ fn compile(instructions: Vec<rscc::Instruction>) -> ObjectProduct {
     // Now that compilation is finished, we can clear out the context state.
     program.module.clear_context(&mut ctx);
 
-    program.module.finish()
+    main_id
 }
 
-fn emit(instructions: &Vec<rscc::Instruction>, start_line: usize, program: &mut Program, main: &mut FunctionBuilder) {
+fn emit<M: Module>(instructions: &Vec<rscc::Instruction>, start_line: usize, program: &mut Program<M>, main: &mut FunctionBuilder) {
     for instr in instructions {
         if instr.lineno() < start_line {
             continue
@@ -449,7 +594,7 @@ fn emit(instructions: &Vec<rscc::Instruction>, start_line: usize, program: &mut 
     }
 }
 
-fn emit_branch(condition: FloatCC, then_location: u32, instructions: &Vec<rscc::Instruction>, program: &mut Program, main: &mut FunctionBuilder) {
+fn emit_branch<M: Module>(condition: FloatCC, then_location: u32, instructions: &Vec<rscc::Instruction>, program: &mut Program<M>, main: &mut FunctionBuilder) {
     let accum_val = main.use_var(program.accum);
     let fzero = main.ins().f64const(0.0);
     let condition = main.ins().fcmp(condition, accum_val, fzero);

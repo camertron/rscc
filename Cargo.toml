@@ -9,9 +9,11 @@ cc = "1.1"
 clap = { version = "4.5", features = ["derive"] }
 cranelift = "0.112"
 cranelift-codegen = "0.112"
+cranelift-jit = "0.112"
 cranelift-module = "0.112"
 cranelift-object = "0.112"
 target-lexicon = "0.12"
+rand = "0.8"
 
 [build-dependencies]
 built = "0.7"
