@@ -39,6 +39,26 @@ impl Instruction {
             Instruction::STP(stp) => stp.lineno,
         }
     }
+
+    pub fn opcode(self: &Self) -> &'static str {
+        match self {
+            Instruction::LDA(lda) => lda.opcode(),
+            Instruction::LDC(ldc) => ldc.opcode(),
+            Instruction::STA(sta) => sta.opcode(),
+            Instruction::INP(inp) => inp.opcode(),
+            Instruction::OUT(out) => out.opcode(),
+            Instruction::ADC(adc) => adc.opcode(),
+            Instruction::ADD(add) => add.opcode(),
+            Instruction::SUB(sub) => sub.opcode(),
+            Instruction::MUL(mul) => mul.opcode(),
+            Instruction::DIV(div) => div.opcode(),
+            Instruction::BRU(bru) => bru.opcode(),
+            Instruction::BPA(bpa) => bpa.opcode(),
+            Instruction::BNA(bna) => bna.opcode(),
+            Instruction::BZA(bza) => bza.opcode(),
+            Instruction::STP(stp) => stp.opcode(),
+        }
+    }
 }
 
 // Load value from location into accumulator.
@@ -50,6 +70,12 @@ pub struct LDA {
     lineno: usize,
 }
 
+impl LDA {
+    pub fn opcode(self: &Self) -> &'static str {
+        "LDA"
+    }
+}
+
 // Load constant value into accumulator.
 //
 // Example: LDC 5 loads the literal number 5 into the accumulator.
@@ -59,6 +85,12 @@ pub struct LDC {
     lineno: usize,
 }
 
+impl LDC {
+    pub fn opcode(self: &Self) -> &'static str {
+        "LDC"
+    }
+}
+
 // Store accumulator into location.
 //
 // Example: STA 5 writes the current value inside the accumulator into memory location 5.
@@ -66,6 +98,12 @@ pub struct LDC {
 pub struct STA {
     pub location: u32,
     lineno: usize,
+}
+
+impl STA {
+    pub fn opcode(self: &Self) -> &'static str {
+        "STA"
+    }
 }
 
 // Input value from keyboard and store at location.
@@ -78,6 +116,12 @@ pub struct INP {
     lineno: usize,
 }
 
+impl INP {
+    pub fn opcode(self: &Self) -> &'static str {
+        "INP"
+    }
+}
+
 // Output value from location onto the screen.
 //
 // Example: OUT 5 causes the value stored at memory location 5 to show up on the terminal screen.
@@ -85,6 +129,12 @@ pub struct INP {
 pub struct OUT {
     pub location: u32,
     lineno: usize,
+}
+
+impl OUT {
+    pub fn opcode(self: &Self) -> &'static str {
+        "OUT"
+    }
 }
 
 // Add constant value to accumulator.
@@ -95,6 +145,12 @@ pub struct OUT {
 pub struct ADC {
     pub value: f64,
     lineno: usize,
+}
+
+impl ADC {
+    pub fn opcode(self: &Self) -> &'static str {
+        "ADC"
+    }
 }
 
 // Add value stored at location into accumulator.
@@ -108,6 +164,12 @@ pub struct ADD {
     lineno: usize,
 }
 
+impl ADD {
+    pub fn opcode(self: &Self) -> &'static str {
+        "ADD"
+    }
+}
+
 // Subtract value stored in location from accumulator.
 //
 // Example: SUB 5 subtracts the value stored at memory location 5 from the existing accumulator value.
@@ -117,6 +179,12 @@ pub struct ADD {
 pub struct SUB {
     pub location: u32,
     lineno: usize,
+}
+
+impl SUB {
+    pub fn opcode(self: &Self) -> &'static str {
+        "SUB"
+    }
 }
 
 // Multiply accumulator by value stored in location.
@@ -130,6 +198,12 @@ pub struct MUL {
     lineno: usize,
 }
 
+impl MUL {
+    pub fn opcode(self: &Self) -> &'static str {
+        "MUL"
+    }
+}
+
 // Divide accumulator by value stored in location.
 //
 // Example: DIV 5 divides the existing accumulator value by the value stored at memory location 5. If the
@@ -141,6 +215,12 @@ pub struct DIV {
     lineno: usize,
 }
 
+impl DIV {
+    pub fn opcode(self: &Self) -> &'static str {
+        "DIV"
+    }
+}
+
 // Branch to location.
 //
 // Example: BRU 5 causes execution to jump to instruction 5, skipping all the instructions between 5 and the
@@ -150,6 +230,12 @@ pub struct DIV {
 pub struct BRU {
     pub location: u32,
     lineno: usize,
+}
+
+impl BRU {
+    pub fn opcode(self: &Self) -> &'static str {
+        "BRU"
+    }
 }
 
 // Branch to location if accumulator is positive.
@@ -165,6 +251,12 @@ pub struct BPA {
     lineno: usize,
 }
 
+impl BPA {
+    pub fn opcode(self: &Self) -> &'static str {
+        "BPA"
+    }
+}
+
 // Branch to location if accumulator is negative.
 //
 // Example: BNA 5 jumps to location 5 if and only if the current accumulator value is negative (i.e. less than
@@ -176,6 +268,12 @@ pub struct BPA {
 pub struct BNA {
     pub location: u32,
     lineno: usize,
+}
+
+impl BNA {
+    pub fn opcode(self: &Self) -> &'static str {
+        "BNA"
+    }
 }
 
 // Branch to location if accumulator is zero.
@@ -191,12 +289,24 @@ pub struct BZA {
     lineno: usize,
 }
 
+impl BZA {
+    pub fn opcode(self: &Self) -> &'static str {
+        "BZA"
+    }
+}
+
 // Stop execution.
 //
 // Example: STP terminates your program. All programs must have STP as the last instruction.
 #[derive(Debug)]
 pub struct STP {
     lineno: usize,
+}
+
+impl STP {
+    pub fn opcode(self: &Self) -> &'static str {
+        "STP"
+    }
 }
 
 #[derive(Debug)]
@@ -620,5 +730,130 @@ fn parse_operand<T: FromStr>(operand: Option<(&str, usize)>) -> Option<Result<T,
         },
 
         _ => None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn it_parses_basic_example_correctly() {
+        let result = parse(r#"
+            LDC 5
+            INP 10
+            STA 11
+            OUT 11
+            STP
+        "#);
+
+        assert!(result.instructions.len() == 5);
+
+        match &result.instructions[0] {
+            Instruction::LDC(ldc) => assert!(ldc.value == 5.0),
+            _ => assert!(false, "Expected LDC on line 1")
+        }
+
+        match &result.instructions[1] {
+            Instruction::INP(inp) => assert!(inp.location == 10),
+            _ => assert!(false, "Expected INP on line 2")
+        }
+
+        match &result.instructions[2] {
+            Instruction::STA(sta) => assert!(sta.location == 11),
+            _ => assert!(false, "Expected LDC on line 3")
+        }
+
+        match &result.instructions[3] {
+            Instruction::OUT(out) => assert!(out.location == 11),
+            _ => assert!(false, "Expected OUT on line 4")
+        }
+
+        match &result.instructions[4] {
+            Instruction::STP(_) => assert!(true),
+            _ => assert!(false, "Expected STP on line 5")
+        }
+    }
+
+    #[test]
+    fn it_parses_branches_correctly() {
+        let result = parse(r#"
+            BRU 5
+            BPA 10
+            BNA 15
+            BZA 20
+            STP
+        "#);
+
+        assert!(result.instructions.len() == 5);
+
+        match &result.instructions[0] {
+            Instruction::BRU(bru) => assert!(bru.location == 5),
+            _ => assert!(false, "Expected BRU on line 1")
+        }
+
+        match &result.instructions[1] {
+            Instruction::BPA(bpa) => assert!(bpa.location == 10),
+            _ => assert!(false, "Expected BPA on line 2")
+        }
+
+        match &result.instructions[2] {
+            Instruction::BNA(bna) => assert!(bna.location == 15),
+            _ => assert!(false, "Expected BNA on line 3")
+        }
+
+        match &result.instructions[3] {
+            Instruction::BZA(bza) => assert!(bza.location == 20),
+            _ => assert!(false, "Expected BZA on line 4")
+        }
+
+        match &result.instructions[4] {
+            Instruction::STP(_) => assert!(true),
+            _ => assert!(false, "Expected STP on line 5")
+        }
+    }
+
+    #[test]
+    fn it_parses_math_instructions_correctly() {
+        let result = parse(r#"
+            ADC 5
+            ADD 10
+            SUB 15
+            MUL 20
+            DIV 25
+            STP
+        "#);
+
+        assert!(result.instructions.len() == 6);
+
+        match &result.instructions[0] {
+            Instruction::ADC(adc) => assert!(adc.value == 5.0),
+            _ => assert!(false, "Expected ADC on line 1")
+        }
+
+        match &result.instructions[1] {
+            Instruction::ADD(add) => assert!(add.location == 10),
+            _ => assert!(false, "Expected ADD on line 2")
+        }
+
+        match &result.instructions[2] {
+            Instruction::SUB(sub) => assert!(sub.location == 15),
+            _ => assert!(false, "Expected SUB on line 3")
+        }
+
+        match &result.instructions[3] {
+            Instruction::MUL(mul) => assert!(mul.location == 20),
+            _ => assert!(false, "Expected MUL on line 4")
+        }
+
+        match &result.instructions[4] {
+            Instruction::DIV(div) => assert!(div.location == 25),
+            _ => assert!(false, "Expected DIV on line 5")
+        }
+
+        match &result.instructions[5] {
+            Instruction::STP(_) => assert!(true),
+            _ => assert!(false, "Expected STP on line 6")
+        }
     }
 }
