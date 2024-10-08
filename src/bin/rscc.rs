@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 use std::collections::HashMap;
 use std::process::ExitCode;
 use clap::{Parser, Subcommand};
+use colored::Colorize;
 use cranelift::prelude::*;
 use cranelift_codegen::ir::{FuncRef, Function};
 use cranelift_codegen::Context;
@@ -373,7 +374,7 @@ fn print_diagnostics(diagnostics: &Vec<Diagnostic>, code: &str) {
     println!("Found {} compilation problem(s)\n", diagnostics.len());
 
     for (idx, diagnostic) in diagnostics.iter().enumerate() {
-        println!("-------------- PROBLEM {} ---------------", idx + 1);
+        println!("{}", format!("-------------- PROBLEM {} ---------------", idx + 1).magenta());
         println!("{}", diagnostic.annotate(code));
     }
 }

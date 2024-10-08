@@ -7,6 +7,7 @@ build = "build.rs"
 [dependencies]
 cc = "1.1"
 clap = { version = "4.5", features = ["derive"] }
+colored = "2.1"
 cranelift = "0.112"
 cranelift-codegen = "0.112"
 cranelift-jit = "0.112"

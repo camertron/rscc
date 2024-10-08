@@ -1,4 +1,5 @@
 use std::str::FromStr;
+use colored::Colorize;
 
 pub enum Instruction {
     LDA(LDA),
@@ -248,7 +249,13 @@ fn annotate_range(source: &str, start: usize, end: usize, message: &str) -> Stri
     let before_lines_keep = last_n(2, before_lines);
     let mut lineno = before_lines.len().saturating_sub(2) + 1;
     let before_lines_keep_linenos: Vec<String> = before_lines_keep.iter().map(|line| {
-        let result = format!("{}. {}", lineno, line);
+        let colored_line = if line.starts_with("#") {
+            format!("{}", line.green())
+        } else {
+            format!("{}", line)
+        };
+
+        let result = format!("{} {}", format!("{}.", lineno).blue(), colored_line);
         lineno += 1;
         result
     }).collect();
@@ -262,19 +269,18 @@ fn annotate_range(source: &str, start: usize, end: usize, message: &str) -> Stri
 
     let after_lines_keep = first_n(2, &after_lines);
     let after_lines_keep_linenos: Vec<String> = after_lines_keep.iter().map(|line| {
-        let result = format!("{}. {}", lineno, line);
+        let result = format!("{} {}", format!("{}.", lineno).blue(), line);
         lineno += 1;
         result
     }).collect();
 
     let annotated = format!(
-        "{before}\n{lineno}. {line}\n{leading_ws}^{dashes} {message}\n{after}",
+        "{before}\n{lineno} {line}\n{leading_ws}{message}\n{after}",
         before = before_lines_keep_linenos.join("\n"),
         line = &source[bol..eol],
-        lineno = current_lineno,
+        lineno = format!("{}.", current_lineno).blue(),
         leading_ws = " ".repeat(start - bol + format!("{}", lineno).len() + 2),
-        dashes = "-".repeat((end - start).saturating_sub(1)),
-        message = message,
+        message = format!("^{dashes} {message}", dashes = "-".repeat((end - start).saturating_sub(1)), message = message).red(),
         after = after_lines_keep_linenos.join("\n")
     );
 
