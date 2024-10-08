@@ -1,11 +1,8 @@
 extern crate rscc;
 
 use rand::Rng;
-use std::env;
-use std::fs;
-use std::io;
+use std::{env, fs, io, str, mem};
 use std::io::Write;
-use std::mem;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::collections::HashMap;
@@ -17,7 +14,7 @@ use cranelift_codegen::Context;
 use cranelift_jit::{JITBuilder, JITModule};
 use cranelift_module::{FuncId, Linkage, Module};
 use cranelift_object::{ObjectBuilder, ObjectModule};
-use rscc::Instruction;
+use rscc::{Diagnostic, Instruction};
 use target_lexicon::Triple;
 use std::str::FromStr;
 use target_lexicon;
@@ -51,6 +48,9 @@ enum Commands {
     Build {
         #[arg(long, short, value_name="FILE", help="The file containing the program to compile")]
         file: String,
+
+        #[arg(long, short, value_name="OUTPUT_PATH", default_value=".", help="The directory into which build artifacts and the resulting compiled executable should be written")]
+        output_path: String,
     },
 
     #[command(
@@ -59,6 +59,16 @@ enum Commands {
     )]
     Run {
         #[arg(long, short, value_name="FILE", help="The file containing the program to run")]
+        file: String,
+    },
+
+    #[command(
+        about="Check an RSC program for problems",
+        long_about="Check an RSC program for problems. If there are errors, this command will print them and exit with a status code of 1. If there are no errors, this command exits with a status code of 0.",
+        arg_required_else_help = true,
+    )]
+    Check {
+        #[arg(long, short, value_name="FILE", help="The file containing the program to check")]
         file: String,
     }
 }
@@ -206,27 +216,36 @@ fn main() -> ExitCode {
     let options = CLI::parse();
 
     match options.command {
-        Commands::Build { file } => {
-            build(&file)
+        Commands::Build { file , output_path } => {
+            build(&file, &output_path)
         }
 
         Commands::Run { file } => {
             run(&file)
         }
+
+        Commands::Check { file } => {
+            check(&file)
+        }
     }
 }
 
-fn build(file: &str) -> ExitCode {
+fn build(file: &str, output_path: &str) -> ExitCode {
     match parse(file) {
         Ok(parse_result) => {
-            build_instrs(file, parse_result.instructions)
+            if parse_result.diagnostics.len() > 0 {
+                print_diagnostics(&parse_result.diagnostics, &parse_result.code);
+                return ExitCode::from(1);
+            }
+
+            build_instrs(file, output_path, parse_result.instructions)
         }
 
-        Err(_) => ExitCode::from(1)
+        Err(exit_code) => exit_code
     }
 }
 
-fn build_instrs(file: &str, instructions: Vec<rscc::Instruction>) -> ExitCode {
+fn build_instrs(file: &str, output_path: &str, instructions: Vec<rscc::Instruction>) -> ExitCode {
     let mut shared_builder = settings::builder();
     shared_builder.enable("is_pic").unwrap();
 
@@ -241,7 +260,7 @@ fn build_instrs(file: &str, instructions: Vec<rscc::Instruction>) -> ExitCode {
     let path = Path::new(file);
     let res = module.finish();
     let base_name = path.file_stem().unwrap().to_str().unwrap();
-    let out_dir = Path::new("target").join(base_name);
+    let out_dir = Path::new(output_path).join("target").join(base_name);
 
     fs::create_dir_all(&out_dir).unwrap();
 
@@ -276,7 +295,7 @@ fn build_instrs(file: &str, instructions: Vec<rscc::Instruction>) -> ExitCode {
     let compile_result = std::process::Command::new(compiler.path().to_str().unwrap())
         .arg(a_file)
         .arg("-o")
-        .arg(base_name)
+        .arg(out_dir.join(base_name))
         .status();
 
     match compile_result {
@@ -291,26 +310,71 @@ fn build_instrs(file: &str, instructions: Vec<rscc::Instruction>) -> ExitCode {
     }
 }
 
-fn parse(file: &str) -> Result<rscc::ParseResult, ()> {
+fn parse(file: &str) -> Result<rscc::ParseResult, ExitCode> {
     let path = Path::new(file);
-    let contents = fs::read_to_string(path).unwrap();
-    let parse_result = rscc::parse(&contents);
 
-    if parse_result.diagnostics.len() > 0 {
-        println!("{}", parse_result.diagnostics[0].annotate(&contents));
-        Err(())
-    } else {
-        Ok(parse_result)
+    match fs::exists(path) {
+        Ok(exists) => {
+            if !exists {
+                println!("No such file '{}'", file);
+                return Err(ExitCode::from(1))
+            }
+        }
+
+        Err(e) => {
+            println!("{}", e);
+            return Err(ExitCode::from(1));
+        }
+    }
+
+    match fs::read_to_string(path) {
+        Ok(contents) => {
+            Ok(rscc::parse(&contents))
+        }
+
+        Err(e) => {
+            println!("{}", e);
+            Err(ExitCode::from(1))
+        }
     }
 }
 
 fn run(file: &str) -> ExitCode {
     match parse(file) {
         Ok(parse_result) => {
+            if parse_result.diagnostics.len() > 0 {
+                print_diagnostics(&parse_result.diagnostics, &parse_result.code);
+                return ExitCode::from(1);
+            }
+
             run_instrs(parse_result.instructions)
         }
 
-        Err(_) => ExitCode::from(1)
+        Err(exit_code) => exit_code
+    }
+}
+
+fn check(file: &str) -> ExitCode {
+    match parse(file) {
+        Ok(parse_result) => {
+            if parse_result.diagnostics.len() > 0 {
+                print_diagnostics(&parse_result.diagnostics, &parse_result.code);
+                return ExitCode::from(1);
+            }
+
+            ExitCode::from(0)
+        }
+
+        Err(exit_code) => exit_code
+    }
+}
+
+fn print_diagnostics(diagnostics: &Vec<Diagnostic>, code: &str) {
+    println!("Found {} compilation problem(s)\n", diagnostics.len());
+
+    for (idx, diagnostic) in diagnostics.iter().enumerate() {
+        println!("-------------- PROBLEM {} ---------------", idx + 1);
+        println!("{}", diagnostic.annotate(code));
     }
 }
 

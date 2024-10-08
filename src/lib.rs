@@ -314,11 +314,12 @@ impl Diagnostic {
 pub struct ParseResult {
     pub instructions: Vec<Instruction>,
     pub diagnostics: Vec<Diagnostic>,
+    pub code: String,
 }
 
 impl ParseResult {
-    pub fn new(instructions: Vec<Instruction>, diagnostics: Vec<Diagnostic>) -> Self {
-        ParseResult { instructions, diagnostics }
+    pub fn new(instructions: Vec<Instruction>, diagnostics: Vec<Diagnostic>, code: String) -> Self {
+        ParseResult { instructions, diagnostics, code }
     }
 }
 
@@ -592,7 +593,7 @@ pub fn parse(str: &str) -> ParseResult {
         )
     }
 
-    return ParseResult::new(instructions, diagnostics);
+    return ParseResult::new(instructions, diagnostics, str.to_string());
 }
 
 fn parse_operand<T: FromStr>(operand: Option<(&str, usize)>) -> Option<Result<T, Diagnostic>> {
