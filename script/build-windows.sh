@@ -3,7 +3,7 @@
 set -x
 set -eo pipefail
 
-cross build --target=x86_64-pc-windows-gnu --release
+CROSS_CONTAINER_OPTS="--env RSCC_VERSION=\"$1\"" cross build --target=x86_64-pc-windows-gnu --release
 
 docker run \
     --platform linux/amd64 \

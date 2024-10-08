@@ -4,7 +4,7 @@ use rand::Rng;
 use std::env;
 use std::fs;
 use std::io;
-use std::io::{Write};
+use std::io::Write;
 use std::mem;
 use std::fs::File;
 use std::path::{Path, PathBuf};
@@ -26,11 +26,15 @@ pub mod built_info {
     include!(concat!(env!("OUT_DIR"), "/built.rs"));
 }
 
+pub mod version_info {
+    include!(concat!(env!("OUT_DIR"), "/version.rs"));
+}
+
 #[derive(Parser, Debug)]
 #[command(
     name="rscc",
     author="Cameron C. Dutro",
-    version="0.1.0",
+    version=version_info::version(),
     about="The RSC (Reasonably Simple Computer) compiler"
 )]
 struct CLI {

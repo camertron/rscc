@@ -3,7 +3,7 @@
 set -x
 set -eo pipefail
 
-cross build --target x86_64-unknown-linux-gnu --release
+CROSS_CONTAINER_OPTS="--env RSCC_VERSION=\"$1\"" cross build --target x86_64-unknown-linux-gnu --release
 
 mkdir rscc-linux-x86_64
 cp target/x86_64-unknown-linux-gnu/release/rscc rscc-linux-x86_64/
