@@ -61,7 +61,7 @@ $> rscc build -f test.rsc
 Then run the resulting executable. It should print `2.50` to standard output:
 
 ```bash
-$> ./test
+$> ./target/test/test
 ```
 
 `build` exits with a status code of 0 if the program was compiled successfully, 1 if there were syntax errors, etc.
