@@ -141,7 +141,7 @@ pub fn compile<M: Module>(instructions: Vec<crate::parser::Instruction>, module:
 
     main.ins().call(program.rsc_init, &[]);
 
-    emit(&instructions, 0, &mut program, &mut main);
+    compile_instructions(&instructions, 0, &mut program, &mut main);
 
     // Tell the builder we're done with this function.
     main.finalize();
@@ -169,7 +169,7 @@ pub fn compile<M: Module>(instructions: Vec<crate::parser::Instruction>, module:
     main_id
 }
 
-fn emit<M: Module>(instructions: &Vec<crate::parser::Instruction>, start_line: usize, program: &mut Program<M>, main: &mut FunctionBuilder) {
+fn compile_instructions<M: Module>(instructions: &Vec<crate::parser::Instruction>, start_line: usize, program: &mut Program<M>, main: &mut FunctionBuilder) {
     for instr in instructions {
         if instr.lineno() < start_line {
             continue
@@ -256,14 +256,14 @@ fn emit<M: Module>(instructions: &Vec<crate::parser::Instruction>, start_line: u
                 main.switch_to_block(then_block);
                 main.seal_block(then_block);
 
-                emit(instructions, bru.location as usize, program, main);
+                compile_instructions(instructions, bru.location as usize, program, main);
 
                 break;
             },
 
             // Branch Positive Accumulator
             Instruction::BPA(bpa) => {
-                emit_branch(
+                compile_branch(
                     FloatCC::GreaterThan,  // condition
                     bpa.location,          // jump here if condition holds
                     instructions,          // list of instructions
@@ -274,7 +274,7 @@ fn emit<M: Module>(instructions: &Vec<crate::parser::Instruction>, start_line: u
 
             // Branch Negative Accumulator
             Instruction::BNA(bna) => {
-                emit_branch(
+                compile_branch(
                     FloatCC::LessThan,     // condition
                     bna.location,          // jump here if condition holds
                     instructions,          // list of instructions
@@ -285,7 +285,7 @@ fn emit<M: Module>(instructions: &Vec<crate::parser::Instruction>, start_line: u
 
             // Branch Zero Accumulator
             Instruction::BZA(bza) => {
-                emit_branch(
+                compile_branch(
                     FloatCC::Equal,        // condition
                     bza.location,          // jump here if condition holds
                     instructions,          // list of instructions
@@ -304,7 +304,7 @@ fn emit<M: Module>(instructions: &Vec<crate::parser::Instruction>, start_line: u
     }
 }
 
-fn emit_branch<M: Module>(condition: FloatCC, then_location: u32, instructions: &Vec<crate::parser::Instruction>, program: &mut Program<M>, main: &mut FunctionBuilder) {
+fn compile_branch<M: Module>(condition: FloatCC, then_location: u32, instructions: &Vec<crate::parser::Instruction>, program: &mut Program<M>, main: &mut FunctionBuilder) {
     let accum_val = main.use_var(program.accum);
     let fzero = main.ins().f64const(0.0);
     let condition = main.ins().fcmp(condition, accum_val, fzero);
@@ -317,7 +317,7 @@ fn emit_branch<M: Module>(condition: FloatCC, then_location: u32, instructions: 
 
     main.switch_to_block(then_block);
     main.seal_block(then_block);
-    emit(instructions, then_location as usize, program, main);
+    compile_instructions(instructions, then_location as usize, program, main);
 
     main.switch_to_block(else_block);
     main.seal_block(else_block);
