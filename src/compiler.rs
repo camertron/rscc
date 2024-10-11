@@ -208,7 +208,7 @@ fn compile_instructions<M: Module>(instructions: &Vec<crate::parser::Instruction
             Instruction::ADC(adc) => {
                 let value = main.ins().f64const(adc.value);
                 let accum_val = main.use_var(program.accum);
-                let new_accum = main.ins().iadd(accum_val, value);
+                let new_accum = main.ins().fadd(accum_val, value);
                 main.def_var(program.accum, new_accum);
             },
 
@@ -392,19 +392,19 @@ mod tests {
         assert!(outputs[0] == 6.0);
     }
 
-    // #[test]
-    // fn adc_works() {
-    //     let outputs = run(r#"
-    //         LDC 6
-    //         ADC 4
-    //         STA 10
-    //         OUT 10
-    //         STP
-    //     "#);
+    #[test]
+    fn adc_works() {
+        let outputs = run(r#"
+            LDC 6
+            ADC 4
+            STA 10
+            OUT 10
+            STP
+        "#);
 
-    //     assert!(outputs.len() > 0);
-    //     assert!(outputs[0] == 10.0);
-    // }
+        assert!(outputs.len() > 0);
+        assert!(outputs[0] == 10.0);
+    }
 
     #[test]
     fn add_works() {
@@ -499,6 +499,44 @@ mod tests {
         let outputs = run(r#"
             LDC 1
             BPA 4
+            LDC 2
+            BRU 6
+            LDC 3
+            STA 10
+            OUT 10
+            STP
+        "#);
+
+        assert!(outputs.len() > 0);
+        assert!(outputs[0] == 3.0);
+    }
+
+    #[test]
+    fn bna_works() {
+        // First branch stores 2 in accum, second branch stores 3.
+        // First branch is skipped, so output should be value of second branch, i.e. 3.
+        let outputs = run(r#"
+            LDC -1
+            BNA 4
+            LDC 2
+            BRU 6
+            LDC 3
+            STA 10
+            OUT 10
+            STP
+        "#);
+
+        assert!(outputs.len() > 0);
+        assert!(outputs[0] == 3.0);
+    }
+
+    #[test]
+    fn bza_works() {
+        // First branch stores 2 in accum, second branch stores 3.
+        // First branch is skipped, so output should be value of second branch, i.e. 3.
+        let outputs = run(r#"
+            LDC 0
+            BZA 4
             LDC 2
             BRU 6
             LDC 3
