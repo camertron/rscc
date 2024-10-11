@@ -337,13 +337,16 @@ mod tests {
     }
 
     fn rsc_out(value: f64) {
-        OUTPUTS.with_borrow_mut(|outputs| outputs.push(value));
+        OUTPUTS.with_borrow_mut(|outputs| {
+            outputs.push((value * 100.0).round() / 100.0)
+        });
     }
 
     fn run(program: &str) -> Vec<f64> {
         OUTPUTS.with_borrow_mut(|outputs| outputs.clear());
 
         let result = crate::parser::parse(program);
+        println!("{:?}", result.diagnostics);
         assert!(result.diagnostics.len() == 0);
 
         let rsc_module = crate::emitter::emit_jit_module(
@@ -363,9 +366,148 @@ mod tests {
 
     #[test]
     fn ldc_works() {
-        let outputs = run("LDC 5\nSTA 10\nOUT 10\nSTP");
+        let outputs = run(r#"
+            LDC 5
+            STA 10
+            OUT 10
+            STP
+        "#);
 
         assert!(outputs.len() > 0);
         assert!(outputs[0] == 5.0);
+    }
+
+    #[test]
+    fn lda_works() {
+        let outputs = run(r#"
+            LDC 6
+            STA 10
+            LDA 10
+            STA 11
+            OUT 11
+            STP
+        "#);
+
+        assert!(outputs.len() > 0);
+        assert!(outputs[0] == 6.0);
+    }
+
+    // #[test]
+    // fn adc_works() {
+    //     let outputs = run(r#"
+    //         LDC 6
+    //         ADC 4
+    //         STA 10
+    //         OUT 10
+    //         STP
+    //     "#);
+
+    //     assert!(outputs.len() > 0);
+    //     assert!(outputs[0] == 10.0);
+    // }
+
+    #[test]
+    fn add_works() {
+        // computes 5 + 7
+        let outputs = run(r#"
+            LDC 7
+            STA 10
+            LDC 5
+            ADD 10
+            STA 11
+            OUT 11
+            STP
+        "#);
+
+        assert!(outputs.len() > 0);
+        assert!(outputs[0] == 12.0);
+    }
+
+    #[test]
+    fn sub_works() {
+        // computes 5 - 7
+        let outputs = run(r#"
+            LDC 7
+            STA 10
+            LDC 5
+            SUB 10
+            STA 11
+            OUT 11
+            STP
+        "#);
+
+        assert!(outputs.len() > 0);
+        assert!(outputs[0] == -2.0);
+    }
+
+    #[test]
+    fn mul_works() {
+        // computes 5 * 7
+        let outputs = run(r#"
+            LDC 7
+            STA 10
+            LDC 5
+            MUL 10
+            STA 11
+            OUT 11
+            STP
+        "#);
+
+        assert!(outputs.len() > 0);
+        assert!(outputs[0] == 35.0);
+    }
+
+    #[test]
+    fn div_works() {
+        // computes 5 / 7
+        let outputs = run(r#"
+            LDC 7
+            STA 10
+            LDC 5
+            DIV 10
+            STA 11
+            OUT 11
+            STP
+        "#);
+
+        assert!(outputs.len() > 0);
+        assert!(outputs[0] == 0.71);
+    }
+
+    #[test]
+    fn bru_works() {
+        // First branch stores 1 in accum, second branch stores 2.
+        // First branch is skipped, so output should be value of second branch, i.e. 2.
+        let outputs = run(r#"
+            BRU 4
+            LDC 1
+            STA 10
+            LDC 2
+            STA 10
+            OUT 10
+            STP
+        "#);
+
+        assert!(outputs.len() > 0);
+        assert!(outputs[0] == 2.0);
+    }
+
+    #[test]
+    fn bpa_works() {
+        // First branch stores 2 in accum, second branch stores 3.
+        // First branch is skipped, so output should be value of second branch, i.e. 3.
+        let outputs = run(r#"
+            LDC 1
+            BPA 4
+            LDC 2
+            BRU 6
+            LDC 3
+            STA 10
+            OUT 10
+            STP
+        "#);
+
+        assert!(outputs.len() > 0);
+        assert!(outputs[0] == 3.0);
     }
 }

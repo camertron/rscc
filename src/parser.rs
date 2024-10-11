@@ -441,7 +441,8 @@ impl ParseResult {
 }
 
 pub fn parse(str: &str) -> ParseResult {
-    let lines = str.split('\n');
+    let raw_lines = str.split('\n');
+    let lines = raw_lines.map(|line| line.trim());
     let mut instructions: Vec<Instruction> = vec![];
     let mut diagnostics: Vec<Diagnostic> = vec![];
     let mut cur_pos: usize = 0;
