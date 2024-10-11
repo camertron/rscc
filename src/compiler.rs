@@ -326,3 +326,46 @@ fn compile_branch<M: Module>(condition: FloatCC, then_location: u32, instruction
     main.switch_to_block(merge_block);
     main.seal_block(merge_block);
 }
+
+#[cfg(test)]
+mod tests {
+    use std::mem;
+    use std::cell::RefCell;
+
+    thread_local! {
+        static OUTPUTS: RefCell<Vec<f64>> = RefCell::new(vec![]);
+    }
+
+    fn rsc_out(value: f64) {
+        OUTPUTS.with_borrow_mut(|outputs| outputs.push(value));
+    }
+
+    fn run(program: &str) -> Vec<f64> {
+        OUTPUTS.with_borrow_mut(|outputs| outputs.clear());
+
+        let result = crate::parser::parse(program);
+        assert!(result.diagnostics.len() == 0);
+
+        let rsc_module = crate::emitter::emit_jit_module(
+            result.instructions,
+            Some(&|builder| {
+                builder.symbol("rsc_out", rsc_out as *const u8);
+            })
+        );
+
+        let main = rsc_module.module.get_finalized_function(rsc_module.main_id);
+        let code_fn = unsafe { mem::transmute::<_, fn() -> ()>(main) };
+
+        code_fn();
+
+        OUTPUTS.with_borrow(|v| v.clone())
+    }
+
+    #[test]
+    fn ldc_works() {
+        let outputs = run("LDC 5\nSTA 10\nOUT 10\nSTP");
+
+        assert!(outputs.len() > 0);
+        assert!(outputs[0] == 5.0);
+    }
+}

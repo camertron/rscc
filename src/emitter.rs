@@ -6,6 +6,7 @@ use target_lexicon::Triple;
 use rand::Rng;
 use std::io;
 use std::io::Write;
+use std::str::FromStr;
 
 pub struct RSCObjectModule {
     pub product: ObjectProduct
@@ -31,7 +32,8 @@ pub fn emit_object_module(triple: Triple, instructions: Vec<crate::parser::Instr
     RSCObjectModule { product: module.finish() }
 }
 
-pub fn emit_jit_module(triple: Triple, instructions: Vec<crate::parser::Instruction>) -> RSCJITModule {
+pub fn emit_jit_module(instructions: Vec<crate::parser::Instruction>, cb: Option<&dyn Fn(&mut JITBuilder)>) -> RSCJITModule {
+    let triple = Triple::from_str(crate::built_info::TARGET).unwrap();
     let mut shared_builder = settings::builder();
 
     // Disable PIC so code can run on aarch64.
@@ -48,6 +50,11 @@ pub fn emit_jit_module(triple: Triple, instructions: Vec<crate::parser::Instruct
     builder.symbol("rsc_rand", rsc_rand as *const u8);
     builder.symbol("rsc_out", rsc_out as *const u8);
     builder.symbol("rsc_input", rsc_input as *const u8);
+
+    match cb {
+        Some(f) => f(&mut builder),
+        None => ()
+    }
 
     let mut module = JITModule::new(builder);
     let main_id = crate::compiler::compile(instructions, &mut module);

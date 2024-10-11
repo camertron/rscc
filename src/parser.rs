@@ -310,6 +310,7 @@ impl STP {
 }
 
 #[derive(Debug)]
+#[derive(PartialEq)]
 pub enum DiagnosticType {
     InvalidOpcode,
     InvalidOperand,
@@ -855,5 +856,65 @@ mod tests {
             Instruction::STP(_) => assert!(true),
             _ => assert!(false, "Expected STP on line 6")
         }
+    }
+
+    #[test]
+    fn it_detects_missing_stp() {
+        let result = parse("LDC 5");
+
+        assert!(result.diagnostics.len() == 1);
+
+        let diagnostic = &result.diagnostics[0];
+        assert!(diagnostic.ty == DiagnosticType::MissingStp);
+        assert!(diagnostic.start == 5);
+        assert!(diagnostic.end == 5);
+    }
+
+    #[test]
+    fn it_detects_invalid_opcodes() {
+        let result = parse("FOO 2\nSTP");
+
+        assert!(result.diagnostics.len() == 1);
+
+        let diagnostic = &result.diagnostics[0];
+        assert!(diagnostic.ty == DiagnosticType::InvalidOpcode);
+        assert!(diagnostic.start == 0);
+        assert!(diagnostic.end == 3);
+    }
+
+    #[test]
+    fn it_detects_non_string_operands() {
+        let result = parse("LDC xyz\nSTP");
+
+        assert!(result.diagnostics.len() == 1);
+
+        let diagnostic = &result.diagnostics[0];
+        assert!(diagnostic.ty == DiagnosticType::InvalidOperand);
+        assert!(diagnostic.start == 4);
+        assert!(diagnostic.end == 7);
+    }
+
+    #[test]
+    fn it_detects_missing_operands() {
+        let result = parse("LDC\nSTP");
+
+        assert!(result.diagnostics.len() == 1);
+
+        let diagnostic = &result.diagnostics[0];
+        assert!(diagnostic.ty == DiagnosticType::MissingOperand);
+        assert!(diagnostic.start == 3);
+        assert!(diagnostic.end == 3);
+    }
+
+    #[test]
+    fn it_detects_too_many_operands() {
+        let result = parse("LDC 5 5\nSTP");
+
+        assert!(result.diagnostics.len() == 1);
+
+        let diagnostic = &result.diagnostics[0];
+        assert!(diagnostic.ty == DiagnosticType::TooManyOperands);
+        assert!(diagnostic.start == 4);
+        assert!(diagnostic.end == 7);
     }
 }

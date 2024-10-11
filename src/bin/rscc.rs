@@ -9,19 +9,11 @@ use target_lexicon::Triple;
 use std::str::FromStr;
 use target_lexicon;
 
-pub mod built_info {
-    include!(concat!(env!("OUT_DIR"), "/built.rs"));
-}
-
-pub mod version_info {
-    include!(concat!(env!("OUT_DIR"), "/version.rs"));
-}
-
 #[derive(Parser, Debug)]
 #[command(
     name="rscc",
     author="Cameron C. Dutro",
-    version=version_info::version(),
+    version=rscc::version_info::version(),
     about="The RSC (Reasonably Simple Computer) compiler"
 )]
 struct CLI {
@@ -110,7 +102,7 @@ fn check(file: &str) -> ExitCode {
 
 fn build_instrs(file: &str, output_path: &str, instructions: Vec<rscc::parser::Instruction>) -> ExitCode {
     let rsc_module = rscc::emitter::emit_object_module(
-        Triple::from_str(built_info::TARGET).unwrap(),
+        Triple::from_str(rscc::built_info::TARGET).unwrap(),
         instructions
     );
 
@@ -138,9 +130,9 @@ fn build_instrs(file: &str, output_path: &str, instructions: Vec<rscc::parser::I
 
     build.file(c_helper)
         .object(o_file)
-        .target(built_info::TARGET)
-        .opt_level(built_info::OPT_LEVEL.parse().unwrap())
-        .host(built_info::HOST)
+        .target(rscc::built_info::TARGET)
+        .opt_level(rscc::built_info::OPT_LEVEL.parse().unwrap())
+        .host(rscc::built_info::HOST)
         .out_dir(out_dir.as_os_str());
 
     build.compile(base_name);
@@ -168,8 +160,8 @@ fn build_instrs(file: &str, output_path: &str, instructions: Vec<rscc::parser::I
 
 fn run_instrs(instructions: Vec<rscc::parser::Instruction>) -> ExitCode {
     let rsc_module = rscc::emitter::emit_jit_module(
-        Triple::from_str(built_info::TARGET).unwrap(),
-        instructions
+        instructions,
+        None
     );
 
     let main = rsc_module.module.get_finalized_function(rsc_module.main_id);
